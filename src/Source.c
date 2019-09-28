@@ -3,6 +3,7 @@
 #include <ntdef.h>
 #include <ntddk.h>
 #include <wdm.h>
+
 int byte = 0;
 char Writeval[4] = { 0xCF, 0xCF, 0x1F, 0x0 };			// Declare overwriters buffers
 char Writevaldue80[4] = { 0x01, 0x01, 0x01, 0x0 };
@@ -40,10 +41,11 @@ char RestoreWritevaldue26C[4] = { 0 };
 char RestoreWritevaldue70[4] = { 0 };
 
 unsigned long bytesaddress[16] = { 0x7FFE0274, 0x7FFE0278, 0x7FFE027C, 0x7FFE0280, 0x7FFE0284, 0x7FFE0030, 0x7FFE0034, 0x7FFE0038, 0x7FFE003C,
-	0x7FFE0040,  0x7FFE0044,  0x7FFE0048,  0x7FFE004C,  0x7FFE026C,  0x7FFE0270,  0x7FFE02E8 };    // Define our KuserAddresses array that we need to overwrites
+	0x7FFE0040,  0x7FFE0044,  0x7FFE0048,  0x7FFE004C,  0x7FFE026C,  0x7FFE0270,  0x7FFE02E8 };    // Define our KuserAddresses matrix that we need to overwrites
 
-
-DRIVER_INITIALIZE DriverEntry;
+/*
+Set the EntryPoint in the linker settings DriverEntry directly.
+*/
 uintptr_t datamap = NULL;
 uintptr_t KuserAddress = 0x7FFE0000;
 NTSTATUS status;
@@ -202,6 +204,7 @@ NTSTATUS DriverUnloader()
 						datamap = MmMapLockedPagesSpecifyCache(descriptor, KernelMode, MmCached, NULL, 0, NormalPagePriority);
 						DetachKernel(KuserAddress);
 						MmProtectMdlSystemAddress(descriptor, PAGE_READONLY);
+						MmUnmapLockedPages((PVOID)KuserAddress, descriptor);
 						MmUnlockPages(descriptor);
 						IoFreeMdl(descriptor);
 						descriptor = NULL;
@@ -223,11 +226,11 @@ NTSTATUS DriverUnloader()
 	{
 		return STATUS_ACCESS_DENIED;
 	}
-	
+
 }
 NTSTATUS StartDriverAndKuserHook()
 {
-	
+
 	if (byte == 0)
 	{
 		__try
@@ -248,6 +251,7 @@ NTSTATUS StartDriverAndKuserHook()
 							datamap = MmMapLockedPagesSpecifyCache(descriptor, KernelMode, MmCached, NULL, 0, NormalPagePriority);
 							AttchKernel(KuserAddress);
 							MmProtectMdlSystemAddress(descriptor, PAGE_READONLY);
+							MmUnmapLockedPages((PVOID)KuserAddress, descriptor);
 							MmUnlockPages(descriptor);
 							IoFreeMdl(descriptor);
 							descriptor = NULL;
@@ -290,7 +294,7 @@ VOID Unload(_In_  struct _DRIVER_OBJECT* DriverObject)
 		return STATUS_SUCCESS;
 	else
 		return MyStatus;
-	
+
 }
 NTSTATUS DriverEntry(_In_  struct _DRIVER_OBJECT* DriverObject, _In_  PUNICODE_STRING RegistryPath) // Driver Entry
 {
